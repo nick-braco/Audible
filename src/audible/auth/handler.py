@@ -43,24 +43,24 @@ class AccessTokenAuth(BaseAuth):
         self.client_id = client_id
         self.auto_refresh = auto_refresh
 
-    def __call__(self, *args, auth_mode=['token'], **kwargs):
-        if self.has_access_token:
-            if not 'token' in auth_mode:
-                logger.warning(f'Auth mode `{auth_mode}` not supported '
-                               f'by this handler.')
-                return {}
-
-            return {
-                'Authorization': 'Bearer ' + self.access_token,
-                'client-id': self.client_id
-            }
-        else:
-            logger.warning('No access token found. Can not apply auth.')
+    def __call__(self, *args, auth_mode=['token'], **kwargs):        
+        if not 'token' in auth_mode:
+            logger.warning(f'Auth mode `{auth_mode}` not supported '
+                           f'by this handler.')
             return {}
+
+        return {
+            'Authorization': 'Bearer ' + self.access_token,
+            'client-id': self.client_id
+        }
 
     @property
     def supported_auth_modes(self):
-        return ['token', None]
+        if self.has_access_token:
+            return ['token']
+        else:
+            logger.warning('No access token found. Can not apply auth.')
+            return []
 
     @property
     def has_access_token(self):

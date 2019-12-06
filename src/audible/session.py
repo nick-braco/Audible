@@ -4,6 +4,7 @@ import json
 from urllib.parse import urlencode
 
 import aiohttp
+import requests
 import yarl
 
 from .errors import (
@@ -21,7 +22,35 @@ from .utils import asynchronous
 REQUEST_LOG = '{method} {url} has received {text}, has returned {status}'
 
 
-class AsyncAuthSession(aiohttp.ClientSession):
+class PrepareRequestMixin:
+    def _prepare_auth_request(self, method, url, auth_handler,
+                              allowed_auth_modes, **kwargs):
+
+        supported_auth_modes = auth_handler.supported_auth_modes
+
+        if isinstance(allowed_auth_modes, str):
+            allowed_auth_modes = list(allowed_auth_modes)
+        if not allowed_auth_modes:
+            allowed_auth_modes = supported_auth_modes
+
+        auth_mode = set(supported_auth_modes).intersection(allowed_auth_modes)
+        auth_mode = list(auth_mode)
+
+        if not auth_mode:
+            msg = (f'Auth mode(s) `{", ".join(allowed_auth_modes)}` '
+                   'not supported by this auth handler.')
+            raise PermissionError(msg)
+
+        auth_headers = auth_handler(
+            method=method,
+            url=url,
+            auth_mode=auth_mode,
+            **kwargs)
+
+        return auth_headers
+
+
+class AsyncAuthSession(PrepareRequestMixin, aiohttp.ClientSession):
     def __init__(self, auth_handler=None, allowed_auth_modes=[], **kwargs):
         self._auth_handler = auth_handler
         self._allowed_auth_modes = allowed_auth_modes
@@ -33,28 +62,16 @@ class AsyncAuthSession(aiohttp.ClientSession):
         auth_handler = auth_handler or self._auth_handler
 
         if auth_handler:
-            allowed_auth_modes = allowed_auth_modes or self._allowed_auth_modes
-            supported_auth_modes = auth_handler.supported_auth_modes
-            if isinstance(allowed_auth_modes, str):
-                allowed_auth_modes = list(allowed_auth_modes)
-            if not allowed_auth_modes:
-                allowed_auth_modes = supported_auth_modes
-
-            auth_mode = set(supported_auth_modes).intersection(allowed_auth_modes)
-            auth_mode = list(auth_mode)
-
-            if not auth_mode:
-                msg = (f'Auth mode(s) {", ".join(auth_mode)} not supported by '
-                      'this auth handler.')
-                raise PermissionError(msg)
-
-            auth_headers = auth_handler(
+            allowed_auth_modes=allowed_auth_modes or self._allowed_auth_modes
+            auth_headers = self._prepare_auth_request(
                 method=method,
                 url=url,
-                params=params,
+                params=params,                
+                auth_handler=auth_handler,
+                allowed_auth_modes=allowed_auth_modes,
                 json=kwargs.get('json'),
-                data=kwargs.get('data'),
-                auth_mode=auth_mode)
+                data=kwargs.get('data')
+            )
             headers.update(auth_headers)
 
         if params:
@@ -62,6 +79,34 @@ class AsyncAuthSession(aiohttp.ClientSession):
             url = yarl.URL(url, encoded=True)
 
         return super()._request(method, url, headers=headers, **kwargs)
+
+
+class SyncAuthSession(PrepareRequestMixin, requests.Session):
+    def __init__(self, auth_handler=None, allowed_auth_modes=[], **kwargs):
+        self._auth_handler = auth_handler
+        self._allowed_auth_modes = allowed_auth_modes
+        super().__init__(**kwargs)
+
+    def request(self, method, url, auth_handler=None, allowed_auth_modes=[],
+                params=None, headers={}, **kwargs):
+
+        auth_handler = auth_handler or self._auth_handler
+
+        if auth_handler:
+            allowed_auth_modes=allowed_auth_modes or self._allowed_auth_modes
+            auth_headers = self._prepare_auth_request(
+                method=method,
+                url=url,
+                params=params,                
+                auth_handler=auth_handler,
+                allowed_auth_modes=allowed_auth_modes,
+                json=kwargs.get('json'),
+                data=kwargs.get('data')
+            )
+            headers.update(auth_headers)
+
+        return super().request(
+            method, url, headers=headers, params=params, **kwargs)
 
 
 @asynchronous
@@ -138,6 +183,6 @@ class AsyncAPISession:
             raise NotResponding
         except aiohttp.ServerDisconnectedError:
             raise NetworkError
-        except PermissionErroras as e:
-            logger.warning(e)
-
+        except PermissionError as e:
+            self.logger.warning(e)
+            return {'error': e}
