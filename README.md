@@ -1,4 +1,5 @@
-# Audible
+
+# AudibleAPI
 
 [![image](https://img.shields.io/pypi/v/audible.svg)](https://pypi.org/project/audible/)
 [![image](https://img.shields.io/pypi/l/audible.svg)](https://pypi.org/project/audible/)
@@ -9,173 +10,175 @@
 [![image](https://img.shields.io/pypi/implementation/audible.svg)](https://pypi.org/project/audible/)
 [![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
 
-**Sync/Async Interface for internal Audible API written in pure Python.**
+**THIS BRANCH IS FOR INTERNAL USE ONLY. IT CONTAINS UNFINISHED CODE (V0.3.0 PRE-ALPHA)AND README IS NOT UP-TO-DATE**
 
-Code and README are forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
-The whole code is written with Pythonista for iOS.
+**(A)Sync Interface for internal Audible API written in pure Python.**
 
-**This README is for the development tree only. The development tree contains many proof of concepts. Some needs still testing. Feel free to participate.**
+Code and README based on omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
+This package is wrote with Pythonista (iOS).
 
-The README for the latest stable release (v0.2.0) can be found [here](https://github.com/mkb79/Audible/blob/master/README.md).
+*With v0.3.0a0  I rewrote this package. The usage has changed completely. This README is for the new version only. Please take care of this.*
 
 ## Requirements
 
-- Python >= 3.6
-- depends on following packages:
-	- aiohttp
-	- beautifulsoup4
-	- pbkdf2
-	- Pillow
-	- pyaes
-	- requests
-	- rsa 
+This package needs **Python 3.6 or above** and has the following dependencies:
+
+- aiohttp
+- beautifulsoup4
+- pbkdf2
+- Pillow
+- pyaes
+- requests
+- rsa 
 
 ## Installation
 
-```python
-# v0.2.0
+For the latest version on PyPI (v0.2.1):
+
+```bash
 pip install audible
-
-# development tree
-pip install git+https://github.com/mkb79/audible.git@developing
 ```
 
-## Usage
+For the latest version on github (v0.3.0a0):
 
-### Basis Examples
+```bash
+pip install git+https://github.com/mkb79/Audible#egg=audible
+```
 
-- Retrieving API credentials
+## Other Implementations
+
+- [audible.cr](https://github.com/omarroth/audible.cr) (Crystal)
+- [AudibleApi](https://github.com/rmcrackan/AudibleApi) (C#)
+
+
+## Basic Usage
+
+1. Import the audible package
+
+	```python
+	import audible
+	```
+
+2. Select a audible marketplace
+
+	At this moment audible has 9 different marketplaces. To select the marketplace for _audible.com_:
+
+	```python
+	market = audible.AudibleMarket('us')
+	```
+
+3. Instantiate a auth handler
+
+	For the first experiments you can use the very limited access  token auth handler. To use them you have to obtain a access token first.
+
+	Obtain a access token currently requires answering a CAPTCHA. By default the captcha will be displayed on screen and a user prompt will be provided to enter the answer. Custom callbacks will be explained further below.
+
+	**Access tokens expires after 60 minutes**
+
+	```python
+	access_token = market.getaccesstoken('USERNAME', 'PASSWORD')
+	auth = audible.AccessTokenAuth(access_token)
+	```
+
+4. Get the api for the selected marketplace and make some api calls
+
+	```python
+	api = market.get_api(auth)
+	library = api.library()
+	library_book = api.library_book('ASIN')
+	buy_book = api.buy_book('ASIN', use_credit=True)
+	custom_request = api.request('GET', '/wishlist')
+	```
+
+5. Close the api connection
+
+	```python
+	api.close()
+	```
+
+
+## AudibleMarket
+
+### Informations
+
+At this moment audible has 9 different marketplaces. [Here](https://audible.custhelp.com/app/answers/detail/a_id/7267/~/what-is-an-audible-marketplace-and-which-is-best-for-me%3F "What is an Audible marketplace and which is best for me?") you can find some informations about them.
+
+| Marketplace      | country\_code |
+|----------------|----------------|
+| Audible.com      |           us           |
+| Audible.ca         |           ca           |
+| Audible.co.uk    |           uk           |
+| Audible.com.au |           au           |
+| Audible.fr           |           fr            |
+| Audible.de         |           de           |
+| Audible.co.jp     |           jp             |
+| Audible.it           |           it              |
+| Audible.in          |           in             |
+
+### Instantiate a AudibleMarket
+
+You can instantiate a market of your choice with:
 
 ```python
-import audible
-
-# example for US accounts
-auth = audible.LoginAuthenticator(
-    "EMAIL",
-    "PASSWORD",
-    locale="us"
-)
+market = audible.AudibleMarket('COUNTRY_CODE')
 ```
 
-- Instantiate API with Authenticator
+### Important methods and property‘s of AudibleMarket
 
-*Hint: the Authenticator will be stored as `auth` attribute, you can access them with `client.auth`*
+The AudibleMarket instance has the following important methods and property’s:
 
-```python
-client = audible.AudibleAPI(auth)
-```
+- `market.market_url`
 
-- Save credentials
+	Property returns website url for the selected marketplace
 
-*Hint: locale (country) code are stored in file*
+- `market.api_url`
 
-```python
-auth.to_file("FILENAME", encryption=False)
-```
+	Property returns api url for the selected marketplace
 
-- Load credentials from file
+- `market.amazon_url`
 
-*Hint: uses saved locale code*
+	Property returns the amazon url for the selected marketplace
 
-```python
-auth = audible.FileAuthenticator("FILENAME")
+- `market.market_infos`
 
-# to specify another locale code at restore
-auth = audible.FileAuthenticator(
-    "FILENAME",
-    locale="some other locale"
-)
-```
+	Property returns some informations about the selected marketplace
 
-- retrieving library from API
+- `market.get_api(auth_handler, **options)`
 
-*Hint: with any request you get a list with response text and the raw response object*
+	Gives a interface to make requests to the remote api for the selected marketplace.
 
-*Hint: audibles current API version is 1.0, the Client use this version on default*
+- `market.get_async_api(auth_handler, **options)`
 
-```python
-library, _ = client.get(
-    path="library",
-    params={
-        "num_results": 999,
-        "response_groups": "media, sample"
-    }
-)
+	Gives a interface to make async requests to the remote api for the selected marketplace.
 
-# to specify another API version
-library, _ = client.get(
-    path="library/books",
-    api_version="0.0",
-    params={
-        "purchaseAfterDate": "01/01/1970",
-        "sortInAscendingOrder": "true"
-    }
-)
-```
+- `market.get_access_token(username, password, **options)`
 
-### Localizations
+	Gives a access token to make api requests (via auth handler), retrieve the user profile or to register a device (this gives additional tokens like adp\_token & device\_cert, website cookies, refresh\_token, etc. for extended auth handling)!
 
-Currently this Client have localizations for 5 countries built-in.
+- `market.get_player_token(username, password, **options)`
 
-- USA (locale="us")
-- Germany (locale="de")
-- United Kingdom (locale="uk")
-- France (locale="fr")
-- Canada (locale="ca")
-
-You can provide custom locales with this code:
-
-```python
-import audible
-
-# example for uk
-custom_locale = audible.Locale(
-    countryCode="uk",
-    domain="co.uk",
-    marketPlaceId="A2I9A3Q2GNFNGQ",
-)
-
-auth = audible.LoginAuthenticator(..., locale=custom_locale)
-client = audible.AudibleAPI(auth)
-```
-
-You can try to autodetect locales like so:
-
-```python
-import audible
-from audible.localization import autodetect_locale
-
-# needs the Top Level Domain for the audible page in your country
-# example for uk
-custom_locale = autodetect_locale("co.uk")
-
-# look if everything is fine
-print(custom_locale)
-
-# create Authenticator
-custom_locale = audible.Locale(**custom_locale)
-auth = audible.LoginAuthenticator(..., locale=custom_locale)
-```
+	Gives a player token to fetch activation bytes.
 
 
-### Load and Save Credentials
+## AuthHandler
+TODO: have to be filled out
 
-#### Saved data
+### Saved data
 
 If you save a session following data will be stored in file:
 
-- login_cookies
-- access_token
-- refresh_token
-- adp_token
-- device_private_key
-- locale_code
-- store_authentication_cookie (*new*)
-- device_info (*new*)
-- customer_info (*new*)
+- login\_cookies
+- access\_token
+- refresh\_token
+- adp\_token
+- device\_private\_key
+- locale\_code
+- store\_authentication\_cookie (*new*)
+- device\_info (*new*)
+- customer\_info (*new*)
 - expires
 
-#### Unencrypted Load/Save
+### Unencrypted Load/Save
 
 Credentials can be saved any time to file like so:
 
@@ -192,7 +195,7 @@ auth = audible.FileAuthenticator("FILENAME")
 Authenticator sets the filename as the default value when loading from or save to file simply run to overwrite old file
 `auth.to_file()`. No filename is needed.
 
-#### Encrypted Load/Save
+### Encrypted Load/Save
 
 This Client supports file encryption now. The encryption
 algorithm used is symmetric AES in cipher-block chaining (CBC) mode. Currently json and bytes style output are supported.
@@ -229,7 +232,7 @@ auth = audible.FileAuthenticator(
 Authenticator sets the filename, password and encryption style as the default values when loading from or save to file simply run to overwrite old file with same password and encryption style
 `auth.to_file()`. No filename is needed.
 
-##### Advanced use of encryption/decryption:
+#### Advanced use of encryption/decryption:
 
 `auth.to_file(..., **kwargs)`
 
@@ -237,11 +240,10 @@ Authenticator sets the filename, password and encryption style as the default va
 
 Following arguments are possible:
 
-- key_size (default = 32)
-- salt_marker (default = b"$")
-- kdf_iterations (default = 1000)
+- key\_size (default = 32)
+- salt\_marker (default = b"$")
+- kdf\_iterations (default = 1000)
 - hashmod (default = Crypto.Hash.SHA256)
-    
 `key_size` may be 16, 24 or 32. The key is derived via the PBKDF2 key derivation function (KDF) from the password and a random salt of 16 bytes (the AES block size) minus the length of the salt header (see below).
 The hash function used by PBKDF2 is SHA256 per default. You can pass a different hash function module via the `hashmod` argument. The module must adhere to the Python API for Cryptographic Hash Functions (PEP 247).
 PBKDF2 uses a number of iterations of the hash function to derive the key, which can be set via the `kdf_iterations` keyword argumeent. The default number is 1000 and the maximum 65535.
@@ -250,7 +252,7 @@ The salt marker must be a byte string of 1-6 bytes length.
 The last block of the encrypted output is padded with up to 16 bytes, all having the value of the length of the padding.
 In json style all values are written as base64 encoded string.
 
-#### Remove encryption
+### Remove encryption
 
 To remove encryption from file (or save as new file):
 
@@ -268,7 +270,83 @@ remove_file_encryption(
 )
 ```
 
-### CAPTCHA
+
+## AudibleAPI
+
+### Instantiate a API
+
+The AudibleAPI class can be instantiate in different ways.
+
+1. The DIRECT way:
+
+	```python
+	api = audible.AudibleAPI(auth_handler, api_url, **options)
+	```
+
+2. The way over a AudibleMarket instance:
+
+	```python
+	market = audible.AudibleMarket(...)
+	api = market.get_api(auth_handler, **options)
+	# or async
+	api = market.get_async_api(auth_handler, **options)
+	```
+
+Following arguments can be given at instantiate:
+
+- `auth_handler` 
+
+	Read the instructions about the auth handlers above.
+
+- `api_url`
+
+	The url for the api of the marketplace you want to request (eg. api.audible.com).
+
+- `is_async`
+
+	If `True` all requests to the api will be async (more informations about async requests see section Asynchron requests). Default is `False`. 
+
+- `version`
+
+	The requested api version. At this moment there are two version, `0.0` and `1.0`. Default is `1.0`. 
+
+- `timeout`
+
+	Set‘s the timeout for a api call. Default is `20`.
+
+### Make requests
+
+Please take a look to the API documentation further below this README for the api endpoints (path), params and body.
+
+To make a request you can use this code:
+
+`api.request(method, path, body=None, **params`
+
+There are some api shortcuts build-in at this moment and more will be added with next releases.
+
+- `api.buy_book(asin, use_credit, **params)`
+
+	Shortcut for
+	
+	```python
+	api.request(
+			'POST',
+			'/orders',
+			body={
+					'asin': asin,
+					'audiblecreditapplied': use_credit
+			},
+			**params
+	)
+	```
+
+
+- `api.library(**params)`
+- `api.library_code(asin, **params)`
+
+### Close the api connection
+
+## CAPTCHA
 
 Logging in currently requires answering a CAPTCHA. By default Pillow is used to show captcha and user prompt will be provided using `input`, which looks like:
 
@@ -296,7 +374,7 @@ auth = audible.LoginAuthenticator(
 )
 ```
 
-### 2FA
+## 2FA
 
 If 2-factor-authentication by default is activated a user prompt will be provided using `input`, which looks like:
 
@@ -322,7 +400,7 @@ auth = audible.LoginAuthenticator(
 ```
 
 
-### Logging
+## Logging
 
 In preparation of adding logging in near future I add following functions:
 
@@ -353,11 +431,86 @@ You can use numeric levels too:
 - 40 (error)
 - 50 (critical)
 
-### Asynchron requests
+
+## Asynchron requests
 
 By default the AudibleAPI client requests are synchron using the requests module.
 
-The client supports now asynchronous request using the aiohttp module. You can instantiate a async client with `client = audible.AudibleAPI(..., is_async=True)`. Example to use async client can be found in [example folder](https://github.com/mkb79/Audible/tree/developing/examples) on github repo.
+The client supports asynchronous request using the aiohttp module. You can instantiate a async client with:
+
+```python
+import audible
+from audible.utils import asynchronous
+
+@asynchronous
+async def main():
+	market = audible.AudibleMarket(country_code)
+	auth = 'your_auth_handler'
+	api = market.get_async_api(auth)
+	library = await api.library()
+	custom_requests = await api.request(...)
+	await api.close()
+
+main()
+```
+
+Please take attention to the `await`-Statements. If you don’t await the result the Client will give a coro instead of the result. 
+
+The advantage of a async Client are making simultaneous requests. Instead of await a result before proceed to the next step you can schedule the requests and execute them at once. The `gather` method from asyncio delivers the results in a list. You can use `with`-Statement with api too, to avoid unclosed connections. 
+
+For example:
+
+```python
+import asyncio
+
+import audible
+from audible.utils import asynchronous
+
+@asynchronous
+async def main():
+	market = audible.AudibleMarket(country_code)
+	auth = 'your_auth_handler'
+	with market.get_async_api(auth) as api:
+		tasks = []
+		
+		library = asyncio.ensure_future(
+			api.library()
+		)
+		tasks.append(library)
+		
+		custom_requests = asyncio.ensure_future(
+			api.request(...)
+		)
+		tasks.append(custom_requests)
+		
+		results = await asyncio.gather(*tasks)
+
+main()
+```
+
+One more example without the `gather` method. If you make async requests without a `await`-Statement the requests will be executed in background but don’t block the system. We `await` the results of the requests when they are needed. In this moment it will block the system until the request is completed (if not already done in the background).
+
+```python
+import audible
+from audible.utils import asynchronous
+
+@asynchronous
+async def main():
+	market = audible.AudibleMarket(country_code)
+	auth = 'your_auth_handler'
+	with market.get_async_api(auth) as api:
+		
+		library = api.library()
+		
+		... do some other stuff ...
+		
+		custom_requests = api.request(...)
+		
+		library = await library
+		custom_request = await custom_request
+
+main()
+```
 
 ## Authentication
 
@@ -367,9 +520,11 @@ Clients are authenticated using OpenID. Once a client has successfully authentic
 
 ### Register device
 
-Clients authenticate with Audible using cookies from Amazon and the given access token to `/auth/register`. Clients are given an refresh token, RSA private key and adp_token.
+Clients can be register a device with the given `access_token` from authentication to `/auth/register`. Registration will be done for a specific device serial. After registration Clients obtaining an refresh token, RSA private key, adp\_token, website\_cookies and store\_authentication\_cookie depending on the requested token type. Multiple devices can be registered to a account.
 
-For requests to the Audible API, requests need to be signed using the provided RSA private key and adp_token. Request signing is fairly straight-forward and uses a signed SHA256 digest. Headers look like:
+### Signing requests
+
+For requests to the Audible API, requests need to be signed using the provided RSA private key and adp\_token from registration. Request signing is fairly straight-forward and uses a signed SHA256 digest. Headers look like:
 
 ```
 x-adp-alg: SHA256withRSA:1.0
@@ -377,35 +532,32 @@ x-adp-signature: AAAAAAAA...:2019-02-16T00:00:01.000000000Z,
 x-adp-token: {enc:...}
 ```
 
+Instead of signing a request the Client can use a `access_token` and `client-id` for request the Audible API. 
+
 As reference for other implementations, a client **must** store a working `access_token` from a successful Amazon login in order to renew `refresh_token`, `adp_token`, etc from `/auth/register`.
 
 ### Refresh access token
 
-An `access_token` can be renewed by making a request to `/auth/token`. `access_token`s are valid for 1 hour.
-To renew access_token with client call:
+An `access_token` can be renewed by making a request to `/auth/token` with a `refresh_token`. `access_token`s are valid for 1 hour.
 
-```python
-# refresh access_token if token already expired
-# if token is valid nothing will be refreshed.
-auth.refresh_token()
+### Refresh website cookies
 
-# to force renew of access_token if token is valid
-auth.refresh_token(force=true)
-```
-
-*Hint: If you saved your session before don't forget to save again.*
+Website cookies can be renewed by making a request to `/ap/exchangetoken` with a `refresh_token` for a specific amazon site.
 
 ### Deregister device
 
-Refresh token, RSA private key and adp_token are valid until deregister.
+Refresh token, RSA private key and adp\_token are valid until deregister.
 
-To deregister a device with client call `auth.deregister_device()`
+Clients deregister with a valid `access_token` to `/auth/deregister`. The `access_token` must be from the set of registration result for the registered device serial. If the `access_token` is expired in the meantime use a `refresh_token` to renew `access_token`. This deregister all devices with the same device serial such as registrations from other users.
 
-To deregister all devices with client call `auth.deregister_device(deregister_all=True)`.
+A `access_token` from a fresh authentication can‘t be used for deregister. They are not bound to a specific registration (device serial).
+
+To deregister all devices with Client use `deregister_all_existing_accounts=True` in the request body.
 This function is necessary to prevent hanging slots if you registered a device earlier but don‘t store the given credentials.
-This also deregister all other devices such as a audible app on mobile devices.
+This also deregister all other devices such as audible apps on mobile devices.
 
-## Documentation:
+
+# API Documentation:
 
 There is currently no publicly available documentation about the Audible API. There is a node client ([audible-api](https://github.com/willthefirst/audible/tree/master/node_modules/audible-api)) that has some endpoints documented, but does not provide information on authentication.
 
@@ -425,48 +577,66 @@ Each bullet below refers to a parameter for the request with the specified metho
 
 Responses will often provide very little info without `response_groups` specified. Multiple response groups can be specified, for example: `/1.0/catalog/products/B002V02KPU?response_groups=product_plan_details,media,review_attrs`. When providing an invalid response group, the server will return an error response but will not provide information on available response groups.
 
-### GET /0.0/library/books
+## POST /1.0/orders
 
-#### Deprecated: Use `/1.0/library`
+- B asin : String
+- B audiblecreditapplied : String
+
+Example request body:
+
+```json
+{
+  "asin": "B002V1CB2Q",
+  "audiblecreditapplied": "false"
+}
+```
+
+- audiblecreditapplied: [true, false]
+
+`audiblecreditapplied` will specify whether to use available credits or default payment method.
+
+## GET /0.0/library/books
+
+**Deprecated: Use `/1.0/library` instead**
 
 params:
 
 - purchaseAfterDate: mm/dd/yyyy
-- sortByColumn: [SHORT_TITLE, strTitle, DOWNLOAD_STATUS, RUNNING_TIME, sortPublishDate, SHORT_AUTHOR, sortPurchDate, DATE_AVAILABLE]
+- sortByColumn: [SHORT\_TITLE, strTitle, DOWNLOAD\_STATUS, RUNNING\_TIME, sortPublishDate, SHORT\_AUTHOR, sortPurchDate, DATE\_AVAILABLE]
 - sortInAscendingOrder: [true, false]
 
-### GET /1.0/library
+## GET /1.0/library
 
 params:
 
-- num_results: \\d+ (max: 1000)
+- num\_results: \\d+ (max: 1000)
 - page: \\d+
-- purchased_after: [RFC3339](https://tools.ietf.org/html/rfc3339) (e.g. `2000-01-01T00:00:00Z`)
-- response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review_attrs, categories, badge_types, category_ladders, claim_code_url, is_downloaded, is_finished, is_returnable, origin_asin, pdf_url, percent_complete, provided_review]
-- sort_by: [-Author, -Length, -Narrator, -PurchaseDate, -Title, Author, Length, Narrator, PurchaseDate, Title]
+- purchased\_after: [RFC3339](https://tools.ietf.org/html/rfc3339) (e.g. `2000-01-01T00:00:00Z`)
+- response\_groups: [contributors, media, price, product\_attrs, product\_desc, product\_extended\_attrs, product\_plan\_details, product\_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review\_attrs, categories, badge\_types, category\_ladders, claim\_code\_url, is\_downloaded, is\_finished, is\_returnable, origin\_asin, pdf\_url, percent\_complete, provided\_review]
+- sort\_by: [-Author, -Length, -Narrator, -PurchaseDate, -Title, Author, Length, Narrator, PurchaseDate, Title]
 
-### GET /1.0/library/%{asin}
+## GET /1.0/library/%asin
 
 params:
 
-- response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review_attrs, categories, badge_types, category_ladders, claim_code_url, is_downloaded, is_finished, is_returnable, origin_asin, pdf_url, percent_complete, provided_review]
+- response\_groups: [contributors, media, price, product\_attrs, product\_desc, product\_extended\_attrs, product\_plan\_details, product\_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review\_attrs, categories, badge\_types, category\_ladders, claim\_code\_url, is\_downloaded, is\_finished, is\_returnable, origin\_asin, pdf\_url, percent\_complete, provided\_review]
 
-### POST(?) /1.0/library/item
+## POST(?) /1.0/library/item
 
 - asin:
 
-### POST(?) /1.0/library/item/%s/%s
+## POST(?) /1.0/library/item/%s/%s
 
-### GET /1.0/wishlist
+## GET /1.0/wishlist
 
 params:
 
-- num_results: \\d+ (max: 50)
+- num\_results: \\d+ (max: 50)
 - page: \\d+
-- response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku]
-- sort_by: [-Author, -DateAdded, -Price, -Rating, -Title, Author, DateAdded, Price, Rating, Title]
+- response\_groups: [contributors, media, price, product\_attrs, product\_desc, product\_extended\_attrs, product\_plan\_details, product\_plans, rating, sample, sku]
+- sort\_by: [-Author, -DateAdded, -Price, -Rating, -Title, Author, DateAdded, Price, Rating, Title]
 
-### POST /1.0/wishlist
+## POST /1.0/wishlist
 
 body:
 
@@ -482,66 +652,66 @@ Example request body:
 
 Returns 201 and a `Location` to the resource.
 
-### DELETE /1.0/wishlist/%{asin}
+## DELETE /1.0/wishlist/%asin
 
 Returns 204 and removes the item from the wishlist using the given `asin`.
 
-### GET /1.0/badges/progress
+## GET /1.0/badges/progress
 
 params:
 
-- locale: en_US
-- response_groups: brag_message
+- locale: en\_US
+- response\_groups: brag\_message
 - store: Audible
 
-### GET /1.0/badges/metadata
+## GET /1.0/badges/metadata
 
 params:
 
-- locale: en_US
-- response_groups: all_levels_metadata
+- locale: en\_US
+- response\_groups: all\_levels\_metadata
 
-### GET /1.0/account/information
+## GET /1.0/account/information
 
 params:
 
-- response_groups: [delinquency_status, customer_benefits, subscription_details_payment_instrument, plan_summary, subscription_details]
+- response\_groups: [delinquency\_status, customer\_benefits, subscription\_details\_payment\_instrument, plan\_summary, subscription\_details]
 - source: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
 
-### POST(?) /1.0/library/collections/%s/channels/%s
+## POST(?) /1.0/library/collections/%s/channels/%s
 
-- customer_id:
+- customer\_id:
 - marketplace:
 
-### POST(?) /1.0/library/collections/%s/products/%s
+## POST(?) /1.0/library/collections/%s/products/%s
 
-- channel_id:
+- channel\_id:
 
-### GET /1.0/catalog/categories
+## GET /1.0/catalog/categories
 
-- categories_num_levels: \\d+ (greater than or equal to 1)
+- categories\_num\_levels: \\d+ (greater than or equal to 1)
 - ids: \\d+(,\\d+)\*
 - root: [InstitutionsHpMarketing, ChannelsConfigurator, AEReadster, ShortsPrime, ExploreBy, RodizioBuckets, EditorsPicks, ClientContent, RodizioGenres, AmazonEnglishProducts, ShortsSandbox, Genres, Curated, ShortsIntroOutroRemoval, Shorts, RodizioEpisodesAndSeries, ShortsCurated]
 
-### GET /1.0/catalog/categories/%{category_id}
+## GET /1.0/catalog/categories/%category\_id
 
-- image_dpi: \\d+
-- image_sizes:
-- image_variants:
-- products_in_plan_timestamp:
-- products_not_in_plan_timestamp:
-- products_num_results: \\d+
-- products_plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-- products_sort_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
-- reviews_num_results: \\d+
-- reviews_sort_by: [MostHelpful, MostRecent]
+- image\_dpi: \\d+
+- image\_sizes:
+- image\_variants:
+- products\_in\_plan\_timestamp:
+- products\_not\_in\_plan\_timestamp:
+- products\_num\_results: \\d+
+- products\_plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+- products\_sort\_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
+- reviews\_num\_results: \\d+
+- reviews\_sort\_by: [MostHelpful, MostRecent]
 
-### POST /1.0/content/%{asin}/licenserequest
+## POST /1.0/content/%asin/licenserequest
 
-- B consumption_type: [Streaming, Offline, Download]
-- B drm_type: [Hls, PlayReady, Hds, Adrm]
+- B consumption\_type: [Streaming, Offline, Download]
+- B drm\_type: [Hls, PlayReady, Hds, Adrm]
 - B quality: [High, Normal, Extreme, Low]
-- B num_active_offline_licenses: \\d+ (max: 10)
+- B num\_active\_offline\_licenses: \\d+ (max: 10)
 
 Example request body:
 
@@ -555,165 +725,187 @@ Example request body:
 
 For a succesful request, returns JSON body with `content_url`.
 
-### GET /1.0/annotations/lastpositions
+## GET /1.0/annotations/lastpositions
 
 - asins: asin (comma-separated), e.g. ?asins=B01LWUJKQ7,B01LWUJKQ7,B01LWUJKQ7
 
-### GET /1.0/content/%{asin}/metadata
+## GET /1.0/content/%asin/metadata
 
-- response_groups: [chapter_info]
+- response\_groups: [chapter\_info]
 - acr:
 
-### GET /1.0/customer/information
+## GET /1.0/customer/information
 
-- response_groups: [migration_details, subscription_details_rodizio, subscription_details_premium, customer_segment, subscription_details_channels]
+- response\_groups: [migration\_details, subscription\_details\_rodizio, subscription\_details\_premium, customer\_segment, subscription\_details\_channels]
 
-### GET /1.0/customer/status
+## GET /1.0/customer/status
 
-- response_groups: [benefits_status, member_giving_status, prime_benefits_status, prospect_benefits_status]
+- response\_groups: [benefits\_status, member\_giving\_status, prime\_benefits\_status, prospect\_benefits\_status]
 
-### GET /1.0/customer/freetrial/eligibility
+## GET /1.0/customer/freetrial/eligibility
 
-### GET /1.0/library/collections
+## GET /1.0/library/collections
 
-- customer_id:
+- customer\_id:
 - marketplace:
 
-### POST(?) /1.0/library/collections
+## POST(?) /1.0/library/collections
 
-- collection_type:
+- collection\_type:
 
-### GET /1.0/library/collections/%s
+## GET /1.0/library/collections/%s
 
-- customer_id:
+- customer\_id:
 - marketplace:
-- page_size:
-- continuation_token:
+- page\_size:
+- continuation\_token:
 
-### GET /1.0/library/collections/%s/products
+## GET /1.0/library/collections/%s/products
 
-- customer_id:
+- customer\_id:
 - marketplace:
-- page_size:
-- continuation_token:
-- image_sizes:
+- page\_size:
+- continuation\_token:
+- image\_sizes:
 
-### GET /1.0/stats/aggregates
+## GET /1.0/stats/aggregates
 
-- daily_listening_interval_duration: ([012]?[0-9])|(30) (0 to 30, inclusive)
-- daily_listening_interval_start_date: YYYY-MM-DD (e.g. `2019-06-16`)
-- locale: en_US
-- monthly_listening_interval_duration: 0?[0-9]|1[012] (0 to 12, inclusive)
-- monthly_listening_interval_start_date: YYYY-MM (e.g. `2019-02`)
-- response_groups: [total_listening_stats]
+- daily\_listening\_interval\_duration: ([012]?[0-9])|(30) (0 to 30, inclusive)
+- daily\_listening\_interval\_start\_date: YYYY-MM-DD (e.g. `2019-06-16`)
+- locale: en\_US
+- monthly\_listening\_interval\_duration: 0?[0-9]|1[012] (0 to 12, inclusive)
+- monthly\_listening\_interval\_start\_date: YYYY-MM (e.g. `2019-02`)
+- response\_groups: [total\_listening\_stats]
 - store: [AudibleForInstitutions, Audible, AmazonEnglish, Rodizio]
 
-### GET /1.0/stats/status/finished
+## GET /1.0/stats/status/finished
 
 - asin: asin
 
-### POST(?) /1.0/stats/status/finished
+## POST(?) /1.0/stats/status/finished
 
-- start_date:
+- start\_date:
 - status:
-- continuation_token:
+- continuation\_token:
 
-### GET /1.0/pages/%s
+## GET /1.0/pages/%s
 
 %s: ios-app-home
 
 - locale: en-US
-- reviews_num_results:
-- reviews_sort_by:
-- response_groups: [media, product_plans, view, product_attrs, contributors, product_desc, sample]
+- reviews\_num\_results:
+- reviews\_sort\_by:
+- response\_groups: [media, product\_plans, view, product\_attrs, contributors, product\_desc, sample]
 
-### GET /1.0/catalog/products/%{asin}
+## GET /1.0/catalog/products/%asin
 
-- image_dpi:
-- image_sizes:
-- response_groups: [contributors, media, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, review_attrs, reviews, sample, sku]
-- reviews_num_results: \\d+ (max: 10)
-- reviews_sort_by: [MostHelpful, MostRecent]
+- image\_dpi:
+- image\_sizes:
+- response\_groups: [contributors, media, product\_attrs, product\_desc, product\_extended\_attrs, product\_plan\_details, product\_plans, rating, review\_attrs, reviews, sample, sku]
+- reviews\_num\_results: \\d+ (max: 10)
+- reviews\_sort\_by: [MostHelpful, MostRecent]
 
-### GET /1.0/catalog/products/%{asin}/reviews
+## GET /1.0/catalog/products/%asin/reviews
 
-- sort_by: [MostHelpful, MostRecent]
-- num_results: \\d+ (max: 50)
+- sort\_by: [MostHelpful, MostRecent]
+- num\_results: \\d+ (max: 50)
 - page: \\d+
 
-### GET /1.0/catalog/products
+## GET /1.0/catalog/products
 
 - author:
-- browse_type:
-- category_id: \\d+(,\\d+)\*
-- disjunctive_category_ids:
-- image_dpi: \\d+
-- image_sizes:
-- in_plan_timestamp:
+- browse\_type:
+- category\_id: \\d+(,\\d+)\*
+- disjunctive\_category\_ids:
+- image\_dpi: \\d+
+- image\_sizes:
+- in\_plan\_timestamp:
 - keywords:
 - narrator:
-- not_in_plan_timestamp:
-- num_most_recent:
-- num_results: \\d+ (max: 50)
+- not\_in\_plan\_timestamp:
+- num\_most\_recent:
+- num\_results: \\d+ (max: 50)
 - page: \\d+
 - plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-- products_since_timestamp:
-- products_sort_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
+- products\_since\_timestamp:
+- products\_sort\_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
 - publisher:
-- response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_detail, product_plans, rating, review_attrs, reviews, sample, sku]
-- reviews_num_results: \\d+ (max: 10)
-- reviews_sort_by: [MostHelpful, MostRecent]
+- response\_groups: [contributors, media, price, product\_attrs, product\_desc, product\_extended\_attrs, product\_plan\_detail, product\_plans, rating, review\_attrs, reviews, sample, sku]
+- reviews\_num\_results: \\d+ (max: 10)
+- reviews\_sort\_by: [MostHelpful, MostRecent]
 - title:
 
-### GET /1.0/recommendations
+## GET /1.0/recommendations
 
-- category_image_variants:
-- image_dpi:
-- image_sizes:
-- in_plan_timestamp:
+- category\_image\_variants:
+- image\_dpi:
+- image\_sizes:
+- in\_plan\_timestamp:
 - language:
-- not_in_plan_timestamp:
-- num_results: \\d+ (max: 50)
+- not\_in\_plan\_timestamp:
+- num\_results: \\d+ (max: 50)
 - plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-- response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku]
-- reviews_num_results: \\d+ (max: 10)
-- reviews_sort_by: [MostHelpful, MostRecent]
+- response\_groups: [contributors, media, price, product\_attrs, product\_desc, product\_extended\_attrs, product\_plan\_details, product\_plans, rating, sample, sku]
+- reviews\_num\_results: \\d+ (max: 10)
+- reviews\_sort\_by: [MostHelpful, MostRecent]
 
-### GET /1.0/catalog/products/%{asin}/sims
+## GET /1.0/catalog/products/%asin/sims
 
-- category_image_variants:
-- image_dpi:
-- image_sizes:
-- in_plan_timestamp:
+- category\_image\_variants:
+- image\_dpi:
+- image\_sizes:
+- in\_plan\_timestamp:
 - language:
-- not_in_plan_timestamp:
-- num_results: \\d+ (max: 50)
+- not\_in\_plan\_timestamp:
+- num\_results: \\d+ (max: 50)
 - plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-- response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plans, rating, review_attrs, reviews, sample, sku]
-- reviews_num_results: \\d+ (max: 10)
-- reviews_sort_by: [MostHelpful, MostRecent]
-- similarity_type: [InTheSameSeries, ByTheSameNarrator, RawSimilarities, ByTheSameAuthor, NextInSameSeries]
+- response\_groups: [contributors, media, price, product\_attrs, product\_desc, product\_extended\_attrs, product\_plans, rating, review\_attrs, reviews, sample, sku]
+- reviews\_num\_results: \\d+ (max: 10)
+- reviews\_sort\_by: [MostHelpful, MostRecent]
+- similarity\_type: [InTheSameSeries, ByTheSameNarrator, RawSimilarities, ByTheSameAuthor, NextInSameSeries]
 
-## Downloading
 
-For multipart books, it's necessary to use the `child_asin` provided with `response_groups=relationships` in order to download each part.
+# Downloading
+
+Downloading books with the 'licenserequest' endpoint of the api gives aaxc files instead of aax files. Aaxc protected files can’t be decoded at the moment. Please take a look at this [issue](https://github.com/mkb79/Audible/issues/3) for more informations. 
+
+To get a download link of a aax protected files on alternate way, you need a **auth handler with adp_token and device_cert**. Here is the code:
+
+```python
+import audible
+from audible.helpers import get_download_link
+
+market = audible.AudibleMarket('country_code')
+auth = your_favourite_auth_handler
+link = get_download_link(market, auth, 'asin', optional: codec)
+```
+
+For downloading books take a look at this [example](https://github.com/mkb79/Audible/blob/master/examples/download_books_aax.py)
+
+If you don’t have adp_token and device_cert you can use the official Audible Download Manager.
+
+# Activation bytes
+
+Since v0.3.0a0 you can fetch your activation bytes. To get them you need a player token first:
 
 ```python
 import audible
 
-client = audible.Client("EMAIL", "PASSWORD", local="us")
-license = client.post(
-   "content/{asin}/licenserequest",
-    body={
-        "drm_type": "Adrm",
-        "consumption_type": "Download",
-        "quality":"Extreme"
-    }
+market = audible.AudibleMarket(country_code)
+player_token = market.get_player_token(
+	username, password, **custom_callbacks
 )
-content_url = license['content_license']['content_metadata']['content_url']['offline_url']
+```
 
-# `content_url` can then be downloaded using any tool
+With the player token we can fetch the activation bytes
 
+```python
+from audible.helpers import fetch_activation_bytes
+
+ab = fetch_activation_bytes(
+	player_token,
+	filename  # optional: saves activation blob
+)
 ```
 
 Assuming you have your activation bytes, you can convert .aax into another format with the following:
