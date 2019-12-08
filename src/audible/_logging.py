@@ -33,7 +33,8 @@ class LogHelper:
     @staticmethod
     def capture_warnings(target: bool = True) -> None:
         """
-        This method is used to turn the capture of warnings by logging on and off
+        This method is used to turn the capture of warnings
+        by logging on and off
         """
         logging.captureWarnings(target)
 
@@ -100,7 +101,8 @@ class LogHelper:
                                  **kwargs
                                  ) -> None:
         """
-        Add rotating file handler to main logger and optional set threshold to level
+        Add rotating file handler to main logger and
+        optional set threshold to level
         """
         try:
             filename = pathlib.Path(filename)
@@ -118,7 +120,8 @@ class LogHelper:
                           name='RotatingFileLogger', level=level)
 
     def set_custom_logger(self, handler, name, level=None,
-                          formatter: logging.Formatter = log_formatter) -> None:
+                          formatter: logging.Formatter = log_formatter
+                          ) -> None:
         """
         Add custom logging handler to main logger and optional
         set threshold to level

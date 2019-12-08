@@ -13,29 +13,32 @@ from .session import AsyncAPISession
 class AudibleAPI:
     """Provides a interface to the internal Audible API.
     
-    This class will usually be instantiated by the 
-    :meth:`get_api <audible.AudibleMarket.get_api>` or 
-    :meth:`get_async_api <audible.AudibleMarket.get_async_api>` method
-    from :class:`AudibleMarket <AudibleMarket>`.
+    :param auth_handler: A ˋˋauth_handlerˋˋ class derived from
+        :class:ˋauth.handler.BaseAuthˋ
+    :param api_url: URL of the api for selected marketplace in format
+        ˋˋapi.audible.{tld}ˋˋ. Take a look at :data:ˋmarkets.AUDIBLE_MARKETSˋ
+        for all available audible markets tlds.
+    :param version: version of remote api to make requests to. Default ˋˋ1.0ˋˋ.
+    :param session: Share a :class:ˋsession.AsyncAuthSessionˋ with multiple
+        ˋAudibleAPIˋ instances for different marketplaces.
+    :param timeout: when a request to :func:`APISession.request` will be timeout.
+
+    :example:
+
+    >>> access_token = 'Atna|...'
+    >>> auth_handler = audible.auth.AccessTokenAuth(access_token)
+    >>> api = AudibleAPI(auth_handler, 'api.audible.com')
     
-    .. note:
-        todo
-    
-    :param auth_handler: handler from :mod:`auth.handler`
-    :param api_url:
-    :param version:
-    :param is_async:
-    :param timeout: when :func:`APISession.request` will be timeout.
+    .. todo:: implement more api request templates
+           
     """
     def __init__(self, auth_handler, api_url, version='1.0',
-                 session=None, is_async=True, timeout=20):
+                 session=None, timeout=20):
 
         self.auth = auth_handler
         self.api_url = api_url
         self.version = version
         self.timeout = timeout
-        self.is_async = is_async
-
         
         self.session = session or AsyncAPISession()
 
@@ -57,7 +60,9 @@ class AudibleAPI:
     def close(self):
         return self.session.close()
 
-    def request(self, method, path, body=None, allowed_auth_modes=[], **params):
+    def request(self, method, path, body=None, allowed_auth_modes=[],
+                **params):
+
         if not path.startswith('/'):
             path = '/' + path
 

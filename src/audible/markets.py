@@ -5,7 +5,6 @@ from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
 
-from .api import AudibleAPI
 from .session import async_request
 
 

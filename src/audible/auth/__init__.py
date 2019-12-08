@@ -21,8 +21,8 @@ from ..markets import AudibleMarket
 
 class AuthManager:
     def __init__(self, market, auth=None):
-        self.market = AudibleMarket(market) if isinstance(market, 'str') else market
-        self.auth = None
+        self.market = AudibleMarket(market) if isinstance(market, str) else market
+        self.auth = auth
 
     def authenticate(self, username, password, **kwargs):
         market = kwargs.pop('market', None) or self.market

@@ -52,6 +52,7 @@ class PrepareRequestMixin:
 
 class AsyncAuthSession(PrepareRequestMixin, aiohttp.ClientSession):
     def __init__(self, auth_handler=None, allowed_auth_modes=[], **kwargs):
+
         self._auth_handler = auth_handler
         self._allowed_auth_modes = allowed_auth_modes
         super().__init__(**kwargs)
@@ -62,11 +63,11 @@ class AsyncAuthSession(PrepareRequestMixin, aiohttp.ClientSession):
         auth_handler = auth_handler or self._auth_handler
 
         if auth_handler:
-            allowed_auth_modes=allowed_auth_modes or self._allowed_auth_modes
+            allowed_auth_modes = allowed_auth_modes or self._allowed_auth_modes
             auth_headers = self._prepare_auth_request(
                 method=method,
                 url=url,
-                params=params,                
+                params=params,
                 auth_handler=auth_handler,
                 allowed_auth_modes=allowed_auth_modes,
                 json=kwargs.get('json'),
@@ -93,11 +94,11 @@ class SyncAuthSession(PrepareRequestMixin, requests.Session):
         auth_handler = auth_handler or self._auth_handler
 
         if auth_handler:
-            allowed_auth_modes=allowed_auth_modes or self._allowed_auth_modes
+            allowed_auth_modes = allowed_auth_modes or self._allowed_auth_modes
             auth_headers = self._prepare_auth_request(
                 method=method,
                 url=url,
-                params=params,                
+                params=params,
                 auth_handler=auth_handler,
                 allowed_auth_modes=allowed_auth_modes,
                 json=kwargs.get('json'),
@@ -186,3 +187,4 @@ class AsyncAPISession:
         except PermissionError as e:
             self.logger.warning(e)
             return {'error': e}
+

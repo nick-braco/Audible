@@ -6,6 +6,15 @@ import time
 
 
 class ElapsedTime:
+    """Time measurement
+    
+    :example:
+
+    >>> et = ElapsedTime()
+    >>> time_marker_1 = et()
+    >>> time_marker_2 = et()
+
+    """
     def __init__(self):
         self.start_time = time.time()
 
