@@ -244,7 +244,7 @@ def sign_request(adp_token, device_private_key, method, url, params=None,
     if data is None and json is None:
         body = ''
     elif json is not None and data is None:    
-        body = json_.dumps(data)
+        body = json_.dumps(json)
     else:
         body = urlencode(data)
 
