@@ -5,14 +5,18 @@ Marketplaces
 General Information
 ===================
 
-Audible offers his service on 10 different marketplaces. You can read more about
+Audible offers his service on 11 different marketplaces. You can read more about
 marketplaces
 `here <https://help.audible.com/s/article/what-is-an-audible-marketplace-and-which-is-best-for-me?language=en_US>`_.
 
 .. note::
 
-   Except website cookies, authentication data from device registration are valid 
+   Except website cookies, authentication data from device registration are valid
    for all marketplaces, no matter which marketplace are used.
+
+.. note::
+
+   The Brazilian marketplace was added in mid-2023.
 
 .. _country_codes:
 
@@ -31,7 +35,7 @@ country code is associated.
 .. list-table:: Marketplaces with country codes
    :widths: 20 50 15
    :header-rows: 1
-   
+
    * - Marketplace
      - Supported Countries
      - Country Code
@@ -44,7 +48,7 @@ country code is associated.
    * - Audible.co.uk
      - UK and Ireland
      - uk
-   * - Audible.co.au
+   * - Audible.com.au
      - Australia and New Zealand
      - au
    * - Audible.fr
@@ -65,6 +69,9 @@ country code is associated.
    * - Audible.es
      - Spain
      - es
+   * - Audible.com.br
+     - Brazil
+     - br
 
 The locale argument
 ===================
@@ -72,3 +79,9 @@ The locale argument
 The locale argument have the same meaning as the country code argument. Because
 of backward compatibility I didn't renamed the locale argument yet. So if you
 are asked for a `locale` than provide a country code from above.
+
+.. note::
+
+   The country code for the Brazilian marketplace needs Audible > 0.8.2.
+   How to use these marketplace with a previous version read
+   `this comment <https://github.com/mkb79/Audible/issues/194#issuecomment-1728896926>`_.

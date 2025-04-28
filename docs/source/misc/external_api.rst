@@ -5,14 +5,14 @@ External Audible API
 Documentation
 =============
 
-There is currently no publicly available documentation about the 
+There is currently no publicly available documentation about the
 Audible API.
 
-There is a node client `audible-api <https://github.com/willthefirst/audible/tree/master/node_modules/audible-api>`_ 
-that has some endpoints documented, but does not provide information 
+There is a node client `audible-api <https://github.com/willthefirst/audible/tree/master/node_modules/audible-api>`_
+that has some endpoints documented, but does not provide information
 on authentication.
 
-Luckily the Audible API is partially self-documenting, however the 
+Luckily the Audible API is partially self-documenting, however the
 parameter names need to be known. Error responses will look like:
 
 .. code-block:: json
@@ -21,21 +21,21 @@ parameter names need to be known. Error responses will look like:
      "message": "1 validation error detected: Value 'some_random_string123' at 'numResults' failed to satisfy constraint: Member must satisfy regular expression pattern: ^\\d+$"
    }
 
-Few endpoints have been fully documented, as a large amount of functionality 
-is not testable from the app or functionality is unknown. Most calls need 
+Few endpoints have been fully documented, as a large amount of functionality
+is not testable from the app or functionality is unknown. Most calls need
 to be authenticated.
 
-For `%s` substitutions the value is unknown or can be inferred from the 
-endpoint. `/1.0/catalog/products/%s` for example requires an `asin`, 
+For `%s` substitutions the value is unknown or can be inferred from the
+endpoint. `/1.0/catalog/products/%s` for example requires an `asin`,
 as in `/1.0/catalog/products/B002V02KPU`.
 
-Each bullet below refers to a parameter for the request with the specified 
+Each bullet below refers to a parameter for the request with the specified
 method and URL.
 
-Responses will often provide very little info without `response_groups` 
-specified. Multiple response groups can be specified, for example: 
-`/1.0/catalog/products/B002V02KPU?response_groups=product_plan_details,media,review_attrs`. 
-When providing an invalid response group, the server will return an error 
+Responses will often provide very little info without `response_groups`
+specified. Multiple response groups can be specified, for example:
+`/1.0/catalog/products/B002V02KPU?response_groups=product_plan_details,media,review_attrs`.
+When providing an invalid response group, the server will return an error
 response but will not provide information on available response groups.
 
 
@@ -207,7 +207,7 @@ Products
    :type asin: string
    :query image_dpi:
    :query image_sizes:
-   :query response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, relationships, review_attrs, category_ladders, claim_code_url, pdf_url, provided_review]
+   :query response_groups: [contributors, media, price, product_attrs, product_desc, product_details, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, relationships, review_attrs, category_ladders, claim_code_url, provided_review, rights, customer_rights, goodreads_ratings]
    :query reviews_num_results: \\d+ (max: 10)
    :query reviews_sort_by: [MostHelpful, MostRecent]
    :query asins:
@@ -362,7 +362,7 @@ Wishlist
 
 .. http:post:: /1.0/wishlist
 
-   :<json string asin: The asin of the book to remove
+   :<json string asin: The asin of the book to add
    :statuscode 201: Returns the `Location` to the resource.
 
    **Example request body**
@@ -400,27 +400,48 @@ Content
 
    :param asin: The asin of the book
    :type asin: string
-   :<json string supported_drm_types: [Mpeg, Adrm]
-   :<json string consumption_type: [Streaming, Offline, Download]
-   :<json string drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
-   :<json string quality: [High, Normal, Extreme, Low]
-   :<json integer num_active_offline_licenses: (max: 10)
+   :<json boolean use_adaptive_bit_rate: [true, false]
+   :<json string quality: [High, Normal]
    :<json string chapter_titles_type: [Tree, Flat]
-   :<json string response_groups: [last_position_heard, pdf_url,
-                                   content_reference, chapter_info]
+   :<json string response_groups: [chapter_info, content_reference,
+                                   last_position_heard, pdf_url,
+                                   ad_insertion, certificate]
+   :<json string consumption_type: [Streaming, Offline, Download]
+   :<json boolean spatial: [true, false]
+   :<json dict supported_media_features: [codecs, drm_types]
+   :<json list codecs: [mp4a.40.2, mp4a.40.42, ec+3, ac-4]
+   :<json list drm_types: [Mpeg, PlayReady, Hls, Dash, Adrm,
+                             FairPlay, Widevine, HlsCmaf]
+   :<json integer num_active_offline_licenses: (max: 10)
 
    **Example request body**
 
    .. code-block:: json
 
        {
-           "supported_drm_types" : [
-               "Mpeg",
-               "Adrm"
-           ],
-           "quality" : "High",
-           "consumption_type" : "Download",
-           "response_groups" : "last_position_heard,pdf_url,content_reference,chapter_info"
+           "quality": "High",
+           "response_groups": "chapter_info,content_reference,last_position_heard,pdf_url, ad_insertion, certificate",
+           "consumption_type": "Download",
+           "supported_media_features":
+               {
+                   "codecs": [
+                       "mp4a.40.2",
+                       "mp4a.40.42",
+                       "ec+3",
+                       "ac-4"
+                   ],
+                   "drm_types": [
+                       "Mpeg",
+                       "PlayReady",
+                       "Hls",
+                       "Dash",
+                       "Adrm",
+                       "FairPlay",
+                       "Widevine",
+                       "HlsCmaf",
+                   ]
+               },
+           "spatial": false
        }
 
    For a succesful request, returns JSON body with `content_url`.
@@ -431,9 +452,23 @@ Content
    :type asin: string
    :query response_groups: [chapter_info, always-returned, content_reference, content_url]
    :query acr:
-   :query quality: [High, Normal, Extreme, Low]
+   :query quality: [High, Normal]
    :query chapter_titles_type: [Tree, Flat]
    :query drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
+
+.. http:post:: /1.0/content/(string:asin)/drmlicense
+
+   :param asin: The asin of the book
+   :type asin: string
+   :<json string licenseChallenge: The license challenge
+   :<json string asin: The asin of the book
+   :<json string consumption_type: "Download"
+   :<json string drm_type: "FairPlay"
+   :>json string license: The encrypted license
+
+.. http:get:: 1.0/content/FairPlay/certificate
+
+   :>json string certificate: The base64 encoded FairPlay certificate
 
 Account
 -------
@@ -518,6 +553,11 @@ Stats
 
 Misc
 -----
+
+.. http:get:: /1.0/actors
+
+   :query bool include_enrolled: [true, false]
+   :query bool include_suggested: [true, false]
 
 .. http:get:: /1.0/annotations/lastpositions
 
